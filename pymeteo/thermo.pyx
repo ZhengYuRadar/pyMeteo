@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 """
 .. module:: pymeteo.thermo
    :platform: Unix, Windows
@@ -17,7 +16,10 @@ import numpy as np
 from pymeteo.constants import *
 import pymeteo.interp
 
-def T(theta,p):
+cimport numpy as np
+#define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION
+
+def T(np.ndarray theta, np.ndarray p):
     """Convert Potential Temperature :math:`\\theta` to Temperature
     
     :parameter theta: Potential temperature (K)
@@ -26,84 +28,86 @@ def T(theta,p):
     """
     return theta * (p00/p)**-kappa_d
 
-def theta(T,p):
-	return T * (p00/p)**kappa_d
+def theta(float T, float p):
+    return T * (p00/p)**kappa_d
 
-def es(T):
-	#return 611.2 * np.exp((Lv(T)/Rv)*((1./T00)-(1./T)))
-        return 611.2 * np.exp(17.67*(T-T00)/(T-29.65))
+def es(float T):
+    #return 611.2 * np.exp((Lv(T)/Rv)*((1./T00)-(1./T)))
+    return 611.2 * np.exp(17.67*(T-T00)/(T-29.65))
 
-def esi(T):
-	#return 611.2 * np.exp((Lv(T)/Rv)*((1./T00)-(1./T)))
-        return 611.2 * np.exp(21.8745584*(T-T00)/(T-7.66))
+def esi(float T):
+    #return 611.2 * np.exp((Lv(T)/Rv)*((1./T00)-(1./T)))
+    return 611.2 * np.exp(21.8745584*(T-T00)/(T-7.66))
 
-def w_vs(T,pd):
-	return epsilon * (es(T)/pd)
+def w_vs(float T, float pd):
+    return epsilon * (es(T)/pd)
 
-def theta_v(th, qv):
-   return th * (1. + 0.61*qv)
+def theta_v(float th, float qv):
+    return th * (1. + 0.61*qv)
 
-def Td(p, qv):
-   el = np.log((qv/epsilon)*p/100./(1. + (qv/epsilon)))
-   Td = T00 + (243.5*el-440.8)/(19.48-el)
-   return Td
+def Td(float p, float qv):
+    el = np.log((qv/epsilon)*p/100./(1. + (qv/epsilon)))
+    Td = T00 + (243.5*el-440.8)/(19.48-el)
+    return Td
 
-def Lv(T):
+def Lv(float T):
 #TODO: Temp dependance
-	return L
+    return L
 
-def th_e(p, t, td, qv):
-   if (td-t) >= -0.1:
-      tlcl = t
-   else:
-      tlcl = 56.0 + ((td-56.0)**(-1) + 0.00125*math.log(t/td) )**(-1)
+def th_e(float p, float t, float td, float qv):
+    if (td-t) >= -0.1:
+        tlcl = t
+    else:
+        tlcl = 56.0 + ((td-56.0)**(-1) + 0.00125*math.log(t/td) )**(-1)
 
-   th_e = t * ((100000./p) ** (0.2854*(1.0-0.28*qv)))*math.exp(((3376./tlcl)-2.54)*qv*(1.0+0.81*qv))
+    th_e = t * ((100000./p) ** (0.2854*(1.0-0.28*qv)))*math.exp(((3376./tlcl)-2.54)*qv*(1.0+0.81*qv))
 
-   return th_e
+    return th_e
 
-def q_vl(p, t):
-   _es = es(t)
-   q_vl = epsilon*_es/(p-_es)
-   return q_vl
+def q_vl(float p, float t):
+    _es = es(t)
+    q_vl = epsilon*_es/(p-_es)
+    return q_vl
 
-def q_vi(p, t):
-   _es = esi(t)
-   q_vi = epsilon*_es/(p-_es)
-   return q_vi
+def q_vi(float p, float t):
+    _es = esi(t)
+    q_vi = epsilon*_es/(p-_es)
+    return q_vi
 
 # 16 Nov 2011 class notes -- PSU Meteo 531 Jerry Harrington
-def dTdz_moist(T,p):
-  pd = p - es(T)
-  num = 1. + ((Lv(T) * w_vs(T,pd))/(Rd*T))
-  den = 1. + ((Lv(T)**2 * w_vs(T,pd))/(cpd * Rv * T**2))
-  return (-g/cpd)*(num/den)
+def dTdz_moist(float T, float p):
+    pd = p - es(T)
+    num = 1. + ((Lv(T) * w_vs(T,pd))/(Rd*T))
+    den = 1. + ((Lv(T)**2 * w_vs(T,pd))/(cpd * Rv * T**2))
+    return (-g/cpd)*(num/den)
 
-def dTdp_moist(T,p):
-	return dTdz_moist(T,p) * -((Rd*T)/(p*g))
+def dTdp_moist(float T, float p):
+    return dTdz_moist(T,p) * -((Rd*T)/(p*g))
 
-def Twb(z,p,th,qv,z0):
+def Twb(np.ndarray z, np.ndarray p, np.ndarray th, np.ndarray qv, float z0):
    # returns wet bulb (deg C) for parcel from height z0
 
    if (len(z) != len(p) != len(_th) != len(qv)):
       raise Exception('Bounds of z, T, Td do not match')
 
-   th_0 = pymeteo.interp.linear(z,th,z0)
-   qv0 = pymeteo.interp.linear(z,qv,z0)
-   p0 = pymeteo.interp.interp_pressure(p,z,z0)
-   t0 = T(th_0, p0)
-   td0 = Td(p0, qv0) 
-   es0 = es(td0)
+   cdef float th_0 = pymeteo.interp.linear(z,th,z0)
+   cdef float qv0 = pymeteo.interp.linear(z,qv,z0)
+   cdef float p0 = pymeteo.interp.interp_pressure(p,z,z0)
+   cdef np.ndarray t0 = T(th_0, p0)
+   cdef np.ndarray td0 = Td(p0, qv0) 
+   cdef np.ndarray es0 = es(td0)
 
-   #print qv0, p0, t0, td0
+   cdef float residual = 0.0005
+   cdef int not_converged = 1
+   cdef int i = 0
+   cdef float Twb = td0-T00
+   cdef int sign = 1
+   cdef int prevsign = 1
+   cdef float incr = 10
 
-   residual = 0.0005
-   not_converged = 1
-   i = 0
-   Twb = td0-T00
-   sign = 1
-   prevsign = 1
-   incr = 10
+   cdef float EWguess
+   cdef float delta_e
+   
    while not_converged:
       Ewguess = es(Twb+T00)
       Eguess = Ewguess/100. - p0/100. * (t0-T00-Twb) * 0.00066 * (1. + (0.00115 * (Twb)))
@@ -133,7 +137,7 @@ def Twb(z,p,th,qv,z0):
 
    return Twb 
 
-def CAPE(z, p, t, q, parcel):
+def CAPE(np.ndarray z, np.ndarray p, np.ndarray t, np.ndarray q, int parcel):
 
    #TODO: TOPS, LImax|500|300
 
@@ -144,27 +148,35 @@ def CAPE(z, p, t, q, parcel):
    if (len(z) != len(p) != len(t) != len(q)):
       raise Exception('Bounds of z, T, Td do not match')
 
-   ml_depth = .500  # for option of mixed layer parcel.
-   pinc = 100. # Pa
+   cdef float ml_depth = .500  # for option of mixed layer parcel.
+   cdef float pinc = 100. # Pa
 
-   adiabat = 1
+   cdef int adiabat = 1
 
-   debuglevel = 0
+   cdef int debuglevel = 0
 
-   nk = len(z)
+   cdef int nk = len(z)
 
    # goal: pi, td, th, thv 
    # have: z, p, t, q
-   pi  = np.empty(nk, np.float32)
-   td  = np.empty(nk, np.float32)
-   th  = np.empty(nk, np.float32)
-   thv = np.empty(nk, np.float32)
+   cdef np.ndarray pi  = np.empty(nk, np.float32)
+   cdef np.ndarray td  = np.empty(nk, np.float32)
+   cdef np.ndarray th  = np.empty(nk, np.float32)
+   cdef np.ndarray thv = np.empty(nk, np.float32)
   
    pi = (p*rp00)**rddcp 
    td = Td(p,q)
    th = t/pi
    thv = th * (1. + reps * q)/(1. + q)
 
+   cdef int kmax
+   cdef float maxthe, avgth, avgqv, th2, qv2
+   cdef float p0, t0, qv0, ql2, qi2, qt
+   cdef float cape, cin, lfc
+#   cdef boolean doit, cloud, ice
+   cdef float the, th_p_e
+   cdef np.ndarray pt, pb, pc, pn, ptv, ptd, pqv, pql
+   cdef float zlcl, zlfc, zel, ztops, ptops, plcl, plfc, pel, max_li
    #TODO: calc z from hydrostatic instead of using provided levels?
 
    # source parcel

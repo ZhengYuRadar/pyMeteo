@@ -22,6 +22,8 @@ Programming Language :: Python :: 2.7
 import os
 import subprocess
 from distutils.core import setup
+from Cython.Build import cythonize
+import numpy
 #from setuptools import setup
 
 def readme():
@@ -45,6 +47,8 @@ setup(name='pymeteo',
       author_email='casey.webster@gmail.com',
       license='BSD 3-clause',
       platforms= ["any"],
+      ext_modules = cythonize('pymeteo/thermo.pyx'),
+      include_dirs=[numpy.get_include()],
       packages=['pymeteo','pymeteo.cm1',
                 'pymeteo.cm1.hodographs',
                 'pymeteo.cm1.soundings'],

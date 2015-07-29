@@ -850,7 +850,7 @@ def draw_dry_adiabat(axes):
     every 10 K
     """
     for T in dry_adiabats:
-        dry_adiabat = met.T(T+met.T00,plevs_plot) - met.T00 + skew(plevs_plot)
+        dry_adiabat = met.T(float(T+met.T00),plevs_plot) - met.T00 + skew(plevs_plot)
         if (T % 10 == 0):
             axes.semilogy(dry_adiabat, plevs_plot, basey=math.e, color = lc_major, linewidth = lw_major)
         else:
